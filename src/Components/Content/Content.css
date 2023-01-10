@@ -1,0 +1,14 @@
+.content-search-box {
+    display: flex;
+    flex-direction: row;
+    justify-content: end;
+}
+
+.content-search-item {
+    padding: 10px;
+}
+
+.content-search-item-label {
+    padding-right: 10px;
+}
+

@@ -4,7 +4,9 @@ import PropTypes from 'prop-types';
 
 const Header = (props) => (
   <div className="HeaderWrapper">
-    Header
+    <h1 className="HeaderText">
+      NASA Media Library
+    </h1>
   </div>
 );
 
