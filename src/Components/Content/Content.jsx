@@ -19,16 +19,44 @@ const Content = (props) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // let search = async () => {
+    //   await onSearch();
+    // }
     onSearch();
   }, [])
 
   function onSearch() {
     setLoading(true)
+
+    function getMetaDataLocation(nasa_id) {
+      return axios
+        .get(`https://images-api.nasa.gov/metadata/${nasa_id}`)
+        .then(response => response.data.location)
+    }
+    function getMetaData(url) {
+      return axios
+        .get(`${url}`)
+        .then(response => response.data)
+    }
     axios
       .get(`https://images-api.nasa.gov/search?q=${query}&page_size=${DEFAULT_PAGE_SIZE}&page=${page}`)
-      .then(data => {
-        setItems(data.data.collection.items)
-        console.log(data.data.collection.items)
+      .then(async data => {
+        let items = [];
+        items = await Promise.all(data.data.collection.items.map(async item => {
+          let nasa_id = item.data[0].nasa_id;
+          
+          let metaDataURL = await getMetaDataLocation(nasa_id);
+          let metaData = await getMetaData(metaDataURL);
+
+          return {
+            href: item.links == undefined ? "" : item.links[0].href,
+            title: item.data[0].title,
+            location: metaData["AVAIL:Location"] ? metaData["AVAIL:Location"] : "",
+            photographer: metaData["AVAIL:Photographer"] ? metaData["AVAIL:Photographer"] : ""
+          };
+        }));
+        console.log(items)
+        setItems(items)
         setLoading(false)
       });
   }
