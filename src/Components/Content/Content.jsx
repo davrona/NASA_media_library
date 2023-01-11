@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from "axios";
+import Pagination from 'react-js-pagination';
+import InfinitScroll from 'react-infinite-scroll-component'
 import PropTypes from 'prop-types';
 
 import Item from '../Item'
@@ -8,24 +10,37 @@ import './Content.css';
 //import { getSearchResult } from '../../../src/Api/nasa';
 //import { Test } from './Content.styles';
 
-const DEFAULT_PAGE_SIZE = 10;
-
 const Content = (props) => {
   const [items, setItems] = useState([]);
-  const [query, setQuery] = useState("Star");
+  const [query, setQuery] = useState("");
   const [startYear, setStartYear] = useState(new Date().getFullYear() - 1);
   const [endYear, setEndYear] = useState(new Date().getFullYear());
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // let search = async () => {
-    //   await onSearch();
-    // }
-    onSearch();
+    let doSearch = async () => {
+      await search();
+    }
+    doSearch();
   }, [])
 
-  function onSearch() {
+  useEffect(() => {
+    if (items.length === 0) {
+      search();
+    }
+  }, [items])
+
+  useEffect(() => {
+    search();
+  }, [page])
+
+  function fetchNextItems() {
+    setPage(page + 1);
+  }
+
+  function search() {
     setLoading(true)
 
     function getMetaDataLocation(nasa_id) {
@@ -38,11 +53,15 @@ const Content = (props) => {
         .get(`${url}`)
         .then(response => response.data)
     }
+    // console.log(`https://images-api.nasa.gov/search?page_size=${itemsPerPage}&page=${page}&year_start=${startYear}&year_end=${endYear}` +
+    //     (query ? `&q=${query}` : ``))
     axios
-      .get(`https://images-api.nasa.gov/search?q=${query}&page_size=${DEFAULT_PAGE_SIZE}&page=${page}`)
+      .get(`https://images-api.nasa.gov/search?page_size=${itemsPerPage}&page=${page}&year_start=${startYear}&year_end=${endYear}` +
+        (query ? `&q=${query}` : ``)
+      )
       .then(async data => {
-        let items = [];
-        items = await Promise.all(data.data.collection.items.map(async item => {
+        let new_items = [];
+        new_items = await Promise.all(data.data.collection.items.map(async item => {
           let nasa_id = item.data[0].nasa_id;
           
           let metaDataURL = await getMetaDataLocation(nasa_id);
@@ -55,10 +74,14 @@ const Content = (props) => {
             photographer: metaData["AVAIL:Photographer"] ? metaData["AVAIL:Photographer"] : ""
           };
         }));
-        console.log(items)
-        setItems(items)
+        setItems(items.concat(new_items))
         setLoading(false)
       });
+  }
+
+  function onSearch() {
+    setItems([]);
+    setPage(1);
   }
 
   return (
@@ -112,11 +135,17 @@ const Content = (props) => {
         </div>
       </div>
       <div className='content-result'>
-        {loading ? (<p>Loading</p>) : 
-            items.map((item, index) => {
+        <InfinitScroll
+          dataLength = {items.length}
+          next = {fetchNextItems}
+          hasMore = {true}
+          loader={<h4>Loading ... </h4>}
+        >
+          {items.map((item, index) => {
               return <Item key={index} item={item} />
-            })
-        }
+          })}
+        </InfinitScroll>
+        
       </div>
     </div>
   )
